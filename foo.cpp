@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <iostream>
 
+#include <random>
+
 using namespace std;
 
 struct BTreeNode
@@ -348,26 +350,37 @@ void insert(int a)
 
 }
 
-int main()
+
+char* getCmdOption(char ** begin, char ** end, const std::string & option)
+{
+    char ** itr = std::find(begin, end, option);
+    if (itr != end && ++itr != end)
+    {
+        return *itr;
+    }
+    return 0;
+}
+
+bool cmdOptionExists(char** begin, char** end, const std::string& option)
+{
+    return std::find(begin, end, option) != end;
+}
+
+int main(int argc, char *argv[])
 
 {
 
-    int i, n, t;
+    int n( 50 ), t;
 
-    cout<<"enter the no of elements to be inserted\n";
+    // Seed with a real random value, if available
+    std::random_device r;
 
-    cin>>n;
+    // Choose a random mean between 1 and 6
+    std::default_random_engine e1(r());
+    std::uniform_int_distribution<int> uniform_dist(0, 1000); // c++-11 uniform random number
 
-    for(i = 0; i < n; i++)
-
-    {
-
-          cout<<"enter the element\n";
-
-          cin>>t;
-
-          insert(t);
-
+    for(int i = 0; i < n; i++) {
+          insert(uniform_dist( e1 ));
     }
 
     cout<<"traversal of constructed tree\n";
