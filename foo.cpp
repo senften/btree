@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <iostream>
-
+#include <algorithm> // find
 #include <random>
 
 using namespace std;
