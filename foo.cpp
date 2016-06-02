@@ -2,74 +2,146 @@
  * C++ Program to Implement B-Tree
  */
 
+// full == 2t-1 where t is the degree (default 3)
+//
+
 #include <stdio.h>
 #include <iostream>
 #include <algorithm> // find
 #include <cstdlib> // atoi
 #include <queue> // std::queue
 #include <random>
+#include <memory> // shared_ptr
 
 using namespace std;
 
-struct BTreeNode
+class BTreeNode;
+typedef std::shared_ptr<BTreeNode> BTreeNode_t;
+
+void bubblesort(int *p, int n);
+
+class BTreeNode
 {
-    int *data;
-    BTreeNode **child_ptr;
-    bool leaf;
-    int n;
-} *root = nullptr, *np = NULL, *x = NULL;
+public:
+    BTreeNode();
+    BTreeNode( unsigned int degree );
+    bool full();
+    bool leaf() {return _leaf;}
+    bool addChild(unsigned int loc, BTreeNode_t child);
+    BTreeNode_t getChild( unsigned int loc );
+    bool addKey( int key );
+// protected:
+    int *_data; // array of data
+    std::vector<BTreeNode_t> _child_ptr; // array of children
+    // std::vector< std::shared_ptr<BTreeNode> > _child_ptr; // array of children
+    bool _leaf;
+    int _n; // num indicies, if not leaf num children = n+1
+    const unsigned int _degree;
+private:
+    void init();
+};
 
-BTreeNode* init()
+BTreeNode::BTreeNode() : _degree( 3 )
 {
-    int i;
-
-    np = new BTreeNode;
-    np->data = new int[5];
-    np->child_ptr = new BTreeNode *[6];
-    np->leaf = true;
-
-    np->n = 0;
-
-    for (i = 0; i < 6; i++) {
-
-        np->child_ptr[i] = NULL;
-
-    }
-
-    return np;
-
+    init();
 }
 
-void traverse(BTreeNode *p)
+BTreeNode::BTreeNode( unsigned int degree ) : _degree( degree ) {
+    init();
+}
+
+void BTreeNode::init()
+{
+    _data = new int[5]; // _degree*2-1
+//    _child_ptr = new BTreeNode *[6]; // _degree*2
+    _leaf = true;
+
+    _n = 0;
+
+    // for (int i = 0; i < 6; i++) {
+    //     _child_ptr[i] = NULL;
+    // }
+}
+
+bool BTreeNode::full()
+{
+    if ( _n==5 ) return true;
+    return false;
+}
+
+bool BTreeNode::addChild( unsigned int loc, BTreeNode_t child )
+{
+    auto it = _child_ptr.begin();
+    it+=loc;
+    _child_ptr.insert( it, child );
+    return true;
+}
+
+BTreeNode_t BTreeNode::getChild( unsigned int loc )
+{
+    auto it = _child_ptr.begin();
+    it+=loc;
+    return *it;
+}
+
+bool BTreeNode::addKey( int key )
+{
+    _data[_n] = key;
+    bubblesort(_data, _n);
+    _n++;
+}
+
+class BTree
+{
+public:
+    BTree();
+    BTreeNode_t root() { return _root;} // should be a smart pointer
+
+    void insertKey( int key );
+    bool insertNonfull (BTreeNode_t node, int key);
+
+protected:
+    BTreeNode_t _root;
+    const unsigned int _degree;
+};
+typedef std::shared_ptr<BTree> SharedBTree_t;
+
+BTree::BTree() : _degree( 3 )
+{
+    // _root=init();
+    _root = BTreeNode_t(new BTreeNode());
+}
+
+void traverse(BTreeNode_t p)
 {
 
     cout<<endl;
 
     int i;
-    for (i = 0; i < p->n; i++) {
+    for (i = 0; i < p->_n; i++) {
 
-        if (p->leaf == false) {
-            traverse(p->child_ptr[i]);
+        if (!p->leaf()) {
+            traverse(p->_child_ptr[i]);
         }
 
-        cout << " " << p->data[i];
+        cout << " " << p->_data[i];
     }
 
     // Any node has n+1 children
-    if (p->leaf == false) {
-        traverse(p->child_ptr[i]);
+    if (p->leaf() == false) {
+        traverse(p->_child_ptr[i]);
     }
 
     cout<<endl;
 
 }
 
-void printTree(BTreeNode *p)
+void printTree(BTreeNode_t p)
 {
 
     cout<<endl;
 
-    std::queue<BTreeNode*> levels;
+    std::queue<BTreeNode_t> levels;
     levels.push( p );
 
     // traverse all kids
@@ -77,19 +149,19 @@ void printTree(BTreeNode *p)
     while ( !levels.empty() ) {
 
         // pop head
-        BTreeNode *node = levels.front(); levels.pop();
+        BTreeNode_t node = levels.front(); levels.pop();
         if ( node ) {
             // add children
-            if (!node->leaf) {
-                for (int i = 0; i<=node->n; i++) {    // Any node has n+1 children
-                    levels.push(node->child_ptr[i]);
+            if (!node->leaf()) {
+                for (int i = 0; i<=node->_n; i++) {    // Any node has n+1 children
+                    levels.push(node->_child_ptr[i]);
                 }
                 levels.push( nullptr );
             }
             // process popped node
 
-            for (int i = 0; i < node->n; i++) {
-                cout << " " << node->data[i];
+            for (int i = 0; i < node->_n; i++) {
+                cout << " " << node->_data[i];
             }
             std::cout << " | ";
         }
@@ -102,278 +174,138 @@ void printTree(BTreeNode *p)
     std::cout << std::endl;
 }
 
-void sort(int *p, int n)
+void bubblesort(int *p, int n)
 
 {
 
     int i, j, temp;
 
-    for (i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
+        for (int j = i; j <= n; j++) {
 
-    {
-
-        for (j = i; j <= n; j++)
-
-        {
-
-            if (p[i] > p[j])
-
-            {
+            if (p[i] > p[j]) { // simple bubble sort
 
                 temp = p[i];
-
                 p[i] = p[j];
-
                 p[j] = temp;
 
             }
-
         }
-
     }
-
 }
 
-int split_child(BTreeNode *x, int i)
-
+int split_child(BTreeNode_t parent, unsigned int loc, BTreeNode_t y)
 {
+    // int mid = y->_data[_degree-1];
+    int mid = y->_data[2];
 
-    int j, mid;
+    // need a new node
+    auto newNode = BTreeNode_t(new BTreeNode());
+    newNode->_leaf = y->leaf(); // if y is a leaf so is the newNode
+    // copy right half of y into newNode
+    // t to 2t-1
+    for (int j = 3; j < 5; j++) { // move backend of members [3,4] to new node
 
-    BTreeNode *np1, *np3, *y;
+        newNode->_data[j - 3] = y->_data[j];
+        newNode->_n++;
 
-    np3 = init();
-
-    np3->leaf = true;
-
-    if (i == -1)
-
-    {
-
-        mid = x->data[2];
-
-        x->data[2] = 0;
-
-        x->n--;
-
-        np1 = init();
-
-        np1->leaf = false;
-
-        x->leaf = true;
-
-        for (j = 3; j < 5; j++)
-
-        {
-
-            np3->data[j - 3] = x->data[j];
-
-            np3->child_ptr[j - 3] = x->child_ptr[j];
-
-            np3->n++;
-
-            x->data[j] = 0;
-
-            x->n--;
-
-        }
-
-        for (j = 0; j < 6; j++)
-
-        {
-
-            x->child_ptr[j] = NULL;
-
-        }
-
-        np1->data[0] = mid;
-
-        np1->child_ptr[np1->n] = x;
-
-        np1->child_ptr[np1->n + 1] = np3;
-
-        np1->n++;
-
-        root = np1;
-
+        y->_data[j] = 0; // 0 out end
+        y->_n--;
     }
 
-    else
-
-    {
-
-        y = x->child_ptr[i];
-
-        mid = y->data[2];
-
-        y->data[2] = 0;
-
-        y->n--;
-
-        for (j = 3; j < 5; j++)
-
-        {
-
-            np3->data[j - 3] = y->data[j];
-
-            np3->n++;
-
-            y->data[j] = 0;
-
-            y->n--;
-
+    // copy over child pointers if y is not a leaf
+    if ( !y->leaf() ) {
+        int j;
+        auto it = y->_child_ptr.begin();
+//        for ( j=0, it+=_degree; it!=y->_child_ptr.end(); j++, it++ ) {
+        for ( j=0, it+=3; it!=y->_child_ptr.end(); j++, it++ ) {
+            newNode->addChild( j, *it );
         }
-
-        x->child_ptr[i + 1] = y;
-
-        x->child_ptr[i + 1] = np3;
-
     }
 
-    return mid;
+    // insert new child newNode in parent *after* y
+    parent->addChild( loc, newNode );
+    // insert key
+    // ...to accomodate the new key we're bringing in from the middle
+    // of y (if you're wondering, since (t-1) + (t-1) = 2t-2, where
+    // the other key went, its coming into x)
+    parent->addKey( mid );
 
 }
 
-void insert(int a)
+bool BTree::insertNonfull (BTreeNode_t node, int key)
+{
+    int i = node->_n;
 
+    if ( node->leaf() ) {
+        node->addKey( key );
+    }
+    else {
+        // find child where new key belongs:
+
+        for ( int i=node->_n-1; i>=0; i-- ) {
+            if ( key > node->_data[i] ) {
+                break;
+            }
+            // while i >= 1 and k < keyi[x] do
+            // 	i--
+            // end while
+        }
+        // i+1 is my desired child
+
+        // if k is in ci[x], then k <= keyi[x] (from the definition)
+        // we'll go back to the last key (least i) where we found this
+        // to be true, then read in that child node
+
+        i++;
+//		Disk-Read (ci[x])
+        auto child = node->getChild( i );
+        if ( child->full() ) {
+            // uh-oh, this child node is full, we'll have to split it
+
+            split_child (node, i, child); //
+
+            // now ci[x] and ci+1[x] are the new children,
+            // and keyi[x] may have been changed.
+            // we'll see if k belongs in the first or the second
+
+            if ( key > node->_data[i] /*keyi[x]*/ ) i++;
+        }
+
+        // call ourself recursively to do the insertion
+        insertNonfull(child, key);
+        // B-Tree-Insert-Nonfull (ci[x], k)
+    }
+}
+
+void BTree::insertKey(int a)
 {
 
     int i, temp;
 
-    x = root;
+    if ( root()->full() ) { // root is full
 
-    if (x == NULL)
+        // uh-oh, the root is full, we have to split it
+		// s = allocate-node ()
+		// root[T] = s 	// new root node
+		// leaf[s] = False // will have some children
+		// n[s] = 0	// for now
+		// c1[s] = r // child is the old root node
+		// B-Tree-Split-Child (s, 1, r) // r is split
+		// B-Tree-Insert-Nonfull (s, k) // s is clearly not full
 
-    {
+        BTreeNode_t oldRoot = root();
+        BTreeNode_t newRoot = BTreeNode_t(new BTreeNode());
 
-        root = init();
+        _root = newRoot;
+        newRoot->addChild( 0, oldRoot ); // child is the old root node; gonna split it
 
-        x = root;
-
+        split_child( newRoot, 0, oldRoot );
+        insertNonfull( newRoot, a ); // newRoot is not full, clearly
     }
-
-    else
-
-    {
-
-        if (x->leaf == true && x->n == 5)
-
-        {
-
-            temp = split_child(x, -1);
-
-            x = root;
-
-            for (i = 0; i < (x->n); i++)
-
-            {
-
-                if ((a > x->data[i]) && (a < x->data[i + 1]))
-
-                {
-
-                    i++;
-
-                    break;
-
-                }
-
-                else if (a < x->data[0])
-
-                {
-
-                    break;
-
-                }
-
-                else
-
-                {
-
-                    continue;
-
-                }
-
-            }
-
-            x = x->child_ptr[i];
-
-        }
-
-        else
-
-        {
-
-            while (x->leaf == false)
-
-            {
-
-            for (i = 0; i < (x->n); i++)
-
-            {
-
-                if ((a > x->data[i]) && (a < x->data[i + 1]))
-
-                {
-
-                    i++;
-
-                    break;
-
-                }
-
-                else if (a < x->data[0])
-
-                {
-
-                    break;
-
-                }
-
-                else
-
-                {
-
-                    continue;
-
-                }
-
-            }
-
-                if ((x->child_ptr[i])->n == 5)
-
-                {
-
-                    temp = split_child(x, i);
-
-                    x->data[x->n] = temp;
-
-                    x->n++;
-
-                    continue;
-
-                }
-
-                else
-
-                {
-
-                    x = x->child_ptr[i];
-
-                }
-
-            }
-
-        }
-
+    else {
+        insertNonfull( root(), a );
     }
-
-    x->data[x->n] = a;
-
-    sort(x->data, x->n);
-
-    x->n++;
-
 }
 
 
@@ -396,30 +328,31 @@ int main(int argc, char *argv[])
 
 {
 
-    int n( 50 ), t;
+    int n( 50 );
+    SharedBTree_t tree;
 
     if (cmdOptionExists(argv, argv+argc, "--count"))
     {
         n = atoi( getCmdOption(argv, argv+argc, "--count") ); // should probably use boost lexical cast
     }
 
-
     // Seed with a real random value, if available
     std::random_device r;
 
     // Choose a random mean between 1 and 6
-    std::default_random_engine e1(r());
+//    std::default_random_engine e1(r());
+    std::default_random_engine e1(42);
     std::uniform_int_distribution<int> uniform_dist(0, 1000); // c++-11 uniform random number
 
     for(int i = 0; i < n; i++) {
-          insert(uniform_dist( e1 ));
-          printTree( root );
+          tree->insertKey(uniform_dist( e1 ));
+          printTree( tree->root() );
           std::cout << "-----" << std::endl;
     }
 
     cout<<"traversal of constructed tree\n";
 
-    traverse(root);
+    traverse(tree->root());
 
 //    getch();
 
