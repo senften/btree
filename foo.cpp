@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <algorithm> // find
+#include <cstdlib> // atoi
+#include <queue> // std::queue
 #include <random>
 
 using namespace std;
@@ -28,9 +30,7 @@ BTreeNode* init()
 
     np->n = 0;
 
-    for (i = 0; i < 6; i++)
-
-    {
+    for (i = 0; i < 6; i++) {
 
         np->child_ptr[i] = NULL;
 
@@ -41,39 +41,65 @@ BTreeNode* init()
 }
 
 void traverse(BTreeNode *p)
-
 {
 
     cout<<endl;
 
     int i;
+    for (i = 0; i < p->n; i++) {
 
-    for (i = 0; i < p->n; i++)
-
-    {
-
-        if (p->leaf == false)
-
-        {
-
+        if (p->leaf == false) {
             traverse(p->child_ptr[i]);
-
         }
 
         cout << " " << p->data[i];
-
     }
 
-    if (p->leaf == false)
-
-    {
-
+    // Any node has n+1 children
+    if (p->leaf == false) {
         traverse(p->child_ptr[i]);
-
     }
 
     cout<<endl;
 
+}
+
+void printTree(BTreeNode *p)
+{
+
+    cout<<endl;
+
+    std::queue<BTreeNode*> levels;
+    levels.push( p );
+
+    // traverse all kids
+
+    while ( !levels.empty() ) {
+
+        // pop head
+        BTreeNode *node = levels.front(); levels.pop();
+        if ( node ) {
+            // add children
+            if (!node->leaf) {
+                for (int i = 0; i<=node->n; i++) {    // Any node has n+1 children
+                    levels.push(node->child_ptr[i]);
+                }
+                levels.push( nullptr );
+            }
+            // process popped node
+
+            for (int i = 0; i < node->n; i++) {
+                cout << " " << node->data[i];
+            }
+            std::cout << " | ";
+        }
+        else {
+            std::cout << std::endl;
+        }
+
+    }
+
+    std::cout << std::endl;
 }
 
 void sort(int *p, int n)
@@ -372,6 +398,12 @@ int main(int argc, char *argv[])
 
     int n( 50 ), t;
 
+    if (cmdOptionExists(argv, argv+argc, "--count"))
+    {
+        n = atoi( getCmdOption(argv, argv+argc, "--count") ); // should probably use boost lexical cast
+    }
+
+
     // Seed with a real random value, if available
     std::random_device r;
 
@@ -381,6 +413,8 @@ int main(int argc, char *argv[])
 
     for(int i = 0; i < n; i++) {
           insert(uniform_dist( e1 ));
+          printTree( root );
+          std::cout << "-----" << std::endl;
     }
 
     cout<<"traversal of constructed tree\n";
