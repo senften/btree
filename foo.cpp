@@ -74,6 +74,7 @@ bool BTreeNode::addChild( unsigned int loc, BTreeNode_t child )
     auto it = _child_ptr.begin();
     it+=loc;
     _child_ptr.insert( it, child );
+    _leaf = false;
     return true;
 }
 
@@ -105,6 +106,7 @@ protected:
     const unsigned int _degree;
 };
 typedef std::shared_ptr<BTree> SharedBTree_t;
+typedef std::shared_ptr<BTree> BTree_t;
 
 BTree::BTree() : _degree( 3 )
 {
@@ -196,9 +198,6 @@ void bubblesort(int *p, int n)
 
 int split_child(BTreeNode_t parent, unsigned int loc, BTreeNode_t y)
 {
-    // int mid = y->_data[_degree-1];
-    int mid = y->_data[2];
-
     // need a new node
     auto newNode = BTreeNode_t(new BTreeNode());
     newNode->_leaf = y->leaf(); // if y is a leaf so is the newNode
@@ -224,18 +223,23 @@ int split_child(BTreeNode_t parent, unsigned int loc, BTreeNode_t y)
     }
 
     // insert new child newNode in parent *after* y
-    parent->addChild( loc, newNode );
+    parent->addChild( loc+1, newNode );
     // insert key
     // ...to accomodate the new key we're bringing in from the middle
     // of y (if you're wondering, since (t-1) + (t-1) = 2t-2, where
     // the other key went, its coming into x)
+
+    // int mid = y->_data[_degree-1];
+    int mid = y->_data[2];
+    y->_data[2] = 0; y->_n--; // moving mid point
+
     parent->addKey( mid );
 
 }
 
 bool BTree::insertNonfull (BTreeNode_t node, int key)
 {
-    int i = node->_n;
+    // int i = node->_n;
 
     if ( node->leaf() ) {
         node->addKey( key );
@@ -243,8 +247,11 @@ bool BTree::insertNonfull (BTreeNode_t node, int key)
     else {
         // find child where new key belongs:
 
-        for ( int i=node->_n-1; i>=0; i-- ) {
+        bool found = false;
+        int i = 0;
+        for ( i=node->_n-1, found=false; i>=0; i-- ) {
             if ( key > node->_data[i] ) {
+                found = true;
                 break;
             }
             // while i >= 1 and k < keyi[x] do
@@ -257,6 +264,7 @@ bool BTree::insertNonfull (BTreeNode_t node, int key)
         // we'll go back to the last key (least i) where we found this
         // to be true, then read in that child node
 
+//        if ( found ) i++;
         i++;
 //		Disk-Read (ci[x])
         auto child = node->getChild( i );
@@ -269,7 +277,9 @@ bool BTree::insertNonfull (BTreeNode_t node, int key)
             // and keyi[x] may have been changed.
             // we'll see if k belongs in the first or the second
 
-            if ( key > node->_data[i] /*keyi[x]*/ ) i++;
+            if ( key > node->_data[i] /*keyi[x]*/ ) {
+                child = node->getChild( ++i );
+            }
         }
 
         // call ourself recursively to do the insertion
@@ -280,9 +290,6 @@ bool BTree::insertNonfull (BTreeNode_t node, int key)
 
 void BTree::insertKey(int a)
 {
-
-    int i, temp;
-
     if ( root()->full() ) { // root is full
 
         // uh-oh, the root is full, we have to split it
@@ -329,7 +336,7 @@ int main(int argc, char *argv[])
 {
 
     int n( 50 );
-    SharedBTree_t tree;
+    auto tree =  BTree_t(new BTree());;
 
     if (cmdOptionExists(argv, argv+argc, "--count"))
     {
